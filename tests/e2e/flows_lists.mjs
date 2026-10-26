@@ -316,6 +316,7 @@ try {
     await settle(300);
     await f.sheetRow('Cash').click();
     await f.noLayers();
+    await settle(300); // the choice is saved a moment after the sheet closes
     const chosen = await state((app) => {
       const m = app.snapshot.paymentMethods.find((x) => x.id === app.settings.defaultPaymentMethodID);
       return m && m.name;
@@ -455,8 +456,11 @@ try {
     await snap('97-notifications-on');
     now = await state((app) => ({ amounts: app.settings.notificationsShowAmounts }));
     expectEqual(now, { amounts: true }, 'amounts switch');
+    // One switch at a time with a pause between, the way a person taps.
     await page.getByRole('switch', { name: /Show amounts in alerts/ }).uncheck({ force: true });
+    await settle(300);
     await page.getByRole('switch', { name: /Budget alerts/ }).uncheck({ force: true });
+    await settle(300);
     await page.getByRole('switch', { name: /Repeating expense reminders/ }).uncheck({ force: true });
     await settle(300);
     await f.back();
