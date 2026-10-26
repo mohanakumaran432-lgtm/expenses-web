@@ -1,0 +1,12 @@
+{
+  "name": "expenses-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private, offline personal expense tracker (web app for the iPhone Home Screen). No dependencies, no network calls.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "serve": "node tools/serve.mjs"
+  },
+  "license": "UNLICENSED"
+}

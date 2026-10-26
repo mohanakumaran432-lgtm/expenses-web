@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!--
+    The app can only talk to its own files: no scripts, styles, images, fonts or network requests from anywhere else.
+    (connect-src 'none' means the page itself cannot send data anywhere. This is what makes "private" checkable.)
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; manifest-src 'self'; worker-src 'self'; media-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F1F3F5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Expenses">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="referrer" content="no-referrer">
+  <title>Expenses</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+  <div id="app" class="app"></div>
+  <div id="cover" class="cover" hidden aria-hidden="true"><div class="cover-mark">Expenses</div></div>
+  <noscript><p class="boot-message">Expenses needs JavaScript. Turn it on for this site in Safari settings and reload.</p></noscript>
+  <div id="boot" class="boot-message" role="status">Opening…</div>
+  <script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
