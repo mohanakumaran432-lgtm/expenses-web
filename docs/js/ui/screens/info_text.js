@@ -1,7 +1,7 @@
 // The words of the Privacy and Known limitations pages. Plain language, no promises the app cannot keep.
 // Each section: { title, lead?: one paragraph, items?: [text] }.
 //
-// Keep these in step with docs/PRIVACY_AND_SECURITY.md and docs/KNOWN_LIMITATIONS.md in the project.
+// Keep these in step with PRIVACY_AND_SECURITY.md and KNOWN_LIMITATIONS.md at the top of the repository.
 
 export const PRIVACY_SECTIONS = Object.freeze([
   {
@@ -16,7 +16,7 @@ export const PRIVACY_SECTIONS = Object.freeze([
   {
     title: 'What does leave your iPhone',
     items: [
-      'Only what you export yourself: a CSV file, a PDF report or a backup file. They go through the iPhone\'s share sheet to the place you pick. The app never uploads anything on its own.',
+      'Only what you export yourself: a CSV file or a backup file. They go through the iPhone\'s share sheet to the place you pick. The app never uploads anything on its own.',
       'To open the app, your iPhone downloads its program files from the website that hosts it. That website can see that a device asked for the files, and when, with the usual details such as the internet address and browser type. It never sees your expenses. Once the app is on your Home Screen it opens from the copy on your iPhone and only checks for a newer version when it is online.',
     ],
   },
@@ -43,6 +43,7 @@ export const PRIVACY_SECTIONS = Object.freeze([
       'Changing the passcode protects what is stored from then on. It does not affect copies of the data made earlier.',
       'Erasing deletes the data the way a browser deletes website data. Traces can remain in the phone\'s storage until it is overwritten.',
       'Whoever controls the website that serves this app can change the program your iPhone runs the next time it updates. If you host it yourself, protect that account with two-factor authentication.',
+      'Websites on the same address share one browser storage area. On a shared address such as yourname.github.io, any other page you publish there could read what this app stores. Keep that address for this app alone, and use a passcode so the stored records are encrypted.',
     ],
   },
   {
@@ -61,7 +62,8 @@ export const LIMITATION_SECTIONS = Object.freeze([
     title: 'Tested here, not yet on your iPhone',
     lead: 'This version was built and tested in a desktop browser engine (Chromium) on a computer, never in Safari on an iPhone. If something looks or behaves differently on your phone, treat it as a bug, not as how it is meant to be. Things most likely to differ:',
     items: [
-      'Sharing and saving files (backups, CSV, PDF reports).',
+      'Adding the app to the Home Screen, working offline and getting new versions.',
+      'Sharing and saving files (backups and CSV files).',
       'The keyboard, the number pad and how the screen resizes when the keyboard opens.',
       'The cover shown in the app switcher.',
       'Spacing around the notch and Home bar, swiping back, and larger text sizes.',
@@ -74,9 +76,10 @@ export const LIMITATION_SECTIONS = Object.freeze([
       'No Face ID or Touch ID. The passcode is always asked for.',
       'No notifications on the lock screen or while the app is closed. Budget alerts and reminders appear when you open the app.',
       'Repeating expenses are added when you open the app, not at the moment they are due. A bill due on the 1st that you open the app on the 3rd is recorded on the 3rd, dated the 1st.',
+      'A new version never replaces the one you are using. It is downloaded quietly and starts the next time you open the app from scratch: swipe it away in the app switcher, then open it again.',
       'iOS decides when stored website data may be removed. Making backups is what keeps your records safe.',
       'The app cannot control whether iOS includes its stored data in iPhone backups.',
-      'PDF reports are made of page pictures, so their text cannot be selected or searched. Use the CSV file for that.',
+      'PDF reports are not available yet. The Export button in Reports offers a CSV file of the expenses in the report instead.',
       'The date box shows dates in your iPhone\'s own format, whatever format you choose for the rest of the app.',
       'Swiping a row to delete is not offered. Delete from the edit screen, or use Select in Transactions.',
     ],

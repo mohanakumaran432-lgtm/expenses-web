@@ -18,8 +18,12 @@ import { openExpenseForm } from './expense_form.js';
 import { chooseFromList, choosePeriod } from './pickers.js';
 import { exportExpensesCsv } from '../exports.js';
 
-/** One colour per payment method, by the method (not by its rank), so a method keeps its colour whatever is spent. */
-const METHOD_COLORS = Object.freeze(['#2B6CB0', '#B7791F', '#2F855A', '#9F3A7A', '#2C7A7B', '#C05621']);
+/**
+ * One colour per payment method, by the method (not by its rank), so a method keeps its colour whatever is spent.
+ * Checked with the colour-blind validator: the closest neighbours are about 7 apart for protanopia, which is acceptable only
+ * because every segment is also named, with its amount and percentage, next to the chart.
+ */
+const METHOD_COLORS = Object.freeze(['#2B6CB0', '#B7791F', '#2F855A', '#9F3A7A', '#1F9BB0', '#C05621']);
 const NOT_SPECIFIED_COLOR = '#8E8E93';
 
 // Remembered while the app stays open.
@@ -68,25 +72,14 @@ export function createReports(app) {
   async function chooseExport() {
     if (!latest) return;
     const compare = view.mode === 'compare';
+    // PDF reports are not built yet (KNOWN_LIMITATIONS.md), so the sheet says so instead of offering a button that cannot work.
     const choice = await app.ui.actions({
-      title: 'Export',
+      title: 'PDF reports are not available yet. You can export a CSV file.',
       options: [
-        { label: compare ? 'PDF comparison report' : 'PDF report', value: 'pdf' },
         { label: compare ? 'CSV of this period’s expenses' : 'CSV of these expenses', value: 'csv' },
       ],
     });
-    if (choice === 'csv') {
-      await exportExpensesCsv(app, latest.expenses);
-    } else if (choice === 'pdf') {
-      const done = app.ui.busy('Preparing the report…');
-      let module;
-      try {
-        module = await import('./report_pdf.js');
-      } finally {
-        done();
-      }
-      await module.openReportPdf(app, latest);
-    }
+    if (choice === 'csv') await exportExpensesCsv(app, latest.expenses);
   }
 
   function reportCurrency() {

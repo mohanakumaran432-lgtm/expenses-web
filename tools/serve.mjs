@@ -55,10 +55,10 @@ async function locate(folder, requestPath) {
   }
 }
 
-export function startServer({ port = 8080, withTests = false, host = '127.0.0.1' } = {}) {
+export function startServer({ port = 8080, withTests = false, host = '127.0.0.1', docsRoot = DOCS } = {}) {
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
-    let folder = DOCS;
+    let folder = docsRoot;
     let pathname = url.pathname;
     if (withTests && pathname.startsWith('/__repo__/')) {
       folder = ROOT;

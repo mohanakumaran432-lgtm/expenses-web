@@ -71,7 +71,7 @@ const cards = () => page.locator(`${TOP} .budget-card`).evaluateAll((els) => els
   pill: el.querySelector('.pill').textContent.trim(),
   figures: [...el.querySelectorAll('.budget-figures span')].map((s) => s.textContent.trim()),
   notes: [...el.querySelectorAll('.budget-notes span')].map((s) => s.textContent.trim()),
-  projection: [...el.querySelectorAll('.budget-projection span')].map((s) => s.textContent.trim()),
+  projection: [...el.querySelectorAll('.budget-projection > *')].map((s) => s.textContent.trim()),
   paused: el.classList.contains('paused'),
   label: el.getAttribute('aria-label'),
 })));
@@ -86,7 +86,7 @@ const pageFacts = () => page.locator(TOP).first().evaluate((root) => {
   return out;
 });
 const notices = () => page.locator(`${TOP} .notice`).evaluateAll((els) => els.map((el) => ({
-  title: (el.querySelector('.notice-title') || {}).textContent || '', body: (el.querySelector('.notice-body') || {}).textContent || '',
+  title: (el.querySelector('.notice-title') || {}).textContent || '', body: (el.querySelector('.notice-body > div:not(.notice-title)') || {}).textContent || '',
 })));
 
 async function openNewBudget() {
@@ -168,14 +168,14 @@ try {
     expect(/Starts again on the 1st of every month\. This month: October 2026\./.test(await sheet().innerText()), 'the monthly note');
     await snap('bud-02-form-empty');
     await typeAmount('5000');
-    expectEqual(await shownAmount(), '5000', 'amount typed');
+    expectEqual(await shownAmount(), '5,000', 'amount typed (thousands are grouped)');
     expect(await saveButton().isEnabled(), 'Save is on');
     expectEqual((await hint().innerText()).trim(), '', 'nothing is missing');
     await f.sheetAction('Cancel').click(); // changed: asks
     await f.waitDialog('Discard this budget?');
     await f.dialogButton('Keep editing').click();
     await settle(200);
-    expectEqual(await shownAmount(), '5000', 'still there after Keep editing');
+    expectEqual(await shownAmount(), '5,000', 'still there after Keep editing');
     await f.sheetAction('Cancel').click();
     await f.waitDialog('Discard this budget?');
     await f.dialogButton('Discard').click();
@@ -277,7 +277,7 @@ try {
       await f.dialogButton('OK').click();
       await settle(150);
     }
-    expectEqual(await sheet().getByRole('group', { name: 'Warning levels' }).locator('.chip').allInnerTexts(), ['50%', '75%', '80%', '90%', '95%', '100%', 'Other…'].filter((t) => t !== '75%' && t !== '90%').concat([]).length ? ['50%', '75%', '80%', '90%', '95%', '100%', 'Other…'] : [], 'the level chips');
+    expectEqual(await sheet().getByRole('group', { name: 'Warning levels' }).locator('.chip').allInnerTexts(), ['50%', '75%', '80%', '90%', '95%', '100%', 'Other…'], 'the level chips');
     // cancel the prompt: nothing added
     await sheet().getByRole('button', { name: 'Other…' }).click();
     await f.waitDialog('Other warning level');
@@ -303,43 +303,48 @@ try {
 
   // ------------------------------------------------------------------------------------------ the cards
 
-  const groceriesSpent = spentIn(data, MONTH, 'Groceries');
-  const S = groceriesSpent;
-  const withinLimit = dirhams(S * 3);
-  const closeLimit = dirhams(S / 0.9);
-  const overLimit = Math.max(1, Math.floor(S / 100 / 2));
+  // One active budget per category and period is deliberate (the app refuses a second one), so the three states use three categories.
+  const LATER = new Set(['Food & Dining', 'Fuel', 'Entertainment', 'Shopping']); // later steps make their own budgets for these
+  const monthSpend = new Map();
+  for (const e of data) if (e.currency === 'AED' && e.day >= MONTH[0] && e.day <= MONTH[1]) monthSpend.set(e.category, (monthSpend.get(e.category) || 0) + e.minor);
+  const picks = [...monthSpend.entries()].filter(([name, minor]) => !LATER.has(name) && minor > 20000).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const plan = ['over', 'close', 'within'].map((kind, i) => {
+    const [category, S] = picks[i] || ['(missing)', 20001];
+    const limit = kind === 'over' ? Math.max(1, Math.floor(S / 100 / 2)) : kind === 'close' ? dirhams(S / 0.9) : dirhams(S * 3);
+    return { kind, category, S, limit, name: `${category} ${kind}` };
+  });
+  const [overPlan, closePlan, withinPlan] = plan;
+  const relaxedName = `${withinPlan.category} (relaxed)`;
 
-  await step('Three budgets for one category show Within, Close to the limit and Over, worked out from the real spending', async () => {
-    expect(S > 20000, `the sample has enough grocery spending this month (${S})`);
-    await makeBudget({ amount: String(withinLimit), name: 'Groceries within', covers: 'Groceries', alerts: false });
-    await makeBudget({ amount: String(closeLimit), name: 'Groceries close', covers: 'Groceries' });
-    await makeBudget({ amount: String(overLimit), name: 'Groceries over', covers: 'Groceries' });
+  await step('Three budgets in three categories show Within, Close to the limit and Over, worked out from the real spending', async () => {
+    expect(picks.length === 3, `the sample has three categories with enough spending this month (${picks.map((p) => p[0])})`);
+    for (const p of [withinPlan, closePlan, overPlan]) await makeBudget({ amount: String(p.limit), name: p.name, covers: p.category, alerts: false });
     await goToBudgets();
     const shown = await cards();
-    expectEqual(shown.map((c) => c.name), ['Groceries over', 'Groceries close', 'Groceries within'], 'cards run from most used to least used');
+    expectEqual(shown.map((c) => c.name), [overPlan.name, closePlan.name, withinPlan.name], 'cards run from most used to least used');
     const [over, close, within] = shown;
     expectEqual(over.pill, 'Over budget', 'over: words');
     expect(over.over, 'over: the left amount is marked');
-    expectEqual(over.left, `${await fmt(S - overLimit * 100)} over`, 'over: how much over');
+    expectEqual(over.left, `${await fmt(overPlan.S - overPlan.limit * 100)} over`, 'over: how much over');
     expectEqual(close.pill, 'Close to the limit', 'close: words');
-    expectEqual(close.left, `${await fmt(closeLimit * 100 - S)} left`, 'close: how much is left');
+    expectEqual(close.left, `${await fmt(closePlan.limit * 100 - closePlan.S)} left`, 'close: how much is left');
     expectEqual(within.pill, 'Within budget', 'within: words');
-    expectEqual(within.left, `${await fmt(withinLimit * 100 - S)} left`, 'within: how much is left');
-    for (const [card, limit] of [[over, overLimit], [close, closeLimit], [within, withinLimit]]) {
-      expectEqual(card.figures[0], `${await fmt(S)} of ${await fmt(limit * 100)}`, `${card.name}: spent of limit`);
+    expectEqual(within.left, `${await fmt(withinPlan.limit * 100 - withinPlan.S)} left`, 'within: how much is left');
+    for (const [card, p] of [[over, overPlan], [close, closePlan], [within, withinPlan]]) {
+      expectEqual(card.figures[0], `${await fmt(p.S)} of ${await fmt(p.limit * 100)}`, `${card.name}: spent of limit`);
       const percent = Number(card.figures[1].replace(/[^\d.]/g, ''));
-      expect(Math.abs(percent - (S / (limit * 100)) * 100) < 0.6, `${card.name}: ${percent}% used should be about ${(S / (limit * 100)) * 100}`);
-      expectEqual(card.period, 'Groceries · Monthly · October 2026', `${card.name}: subtitle`);
+      expect(Math.abs(percent - (p.S / (p.limit * 100)) * 100) < 0.6, `${card.name}: ${percent}% used should be about ${(p.S / (p.limit * 100)) * 100}`);
+      expectEqual(card.period, `${p.category} · Monthly · October 2026`, `${card.name}: subtitle`);
       expect(/^11 days left after today$/.test(card.notes[0]), `${card.name}: time left (${card.notes[0]})`);
       expect(card.projection[0] === 'Projection', `${card.name}: projection heading`);
-      expect(/^At the current pace you would spend about AED [\d,.]+ by 31 Oct\.$/.test(card.projection[1]), `${card.name}: projection (${card.projection[1]})`);
+      expect(/^At the current pace you would spend about AED\s[\d,.]+ by 31 Oct\.$/.test(card.projection[1]), `${card.name}: projection (${card.projection[1]})`);
       expect(/^An estimate from your spending so far, not a promise\.$/.test(card.projection[card.projection.length - 1]), `${card.name}: honest about it being an estimate`);
     }
-    expect(/^That is about AED [\d,.]+ more than the budget\.$/.test(over.projection[2]), 'over: says by how much the pace overshoots');
-    expect(/^About AED [\d,.]+ a day keeps you within the budget\.$/.test(within.notes[1]), 'within: says what a day may cost');
+    expect(/^That is about AED\s[\d,.]+ more than the budget\.$/.test(over.projection[2]), 'over: says by how much the pace overshoots');
+    expect(/^About AED\s[\d,.]+ a day keeps you within the budget\.$/.test(within.notes[1]), 'within: says what a day may cost');
     expect(over.notes.length === 1, 'over: no daily allowance is offered when already over');
-    const projected = Number(close.projection[1].replace(/[^\d.]/g, '')) * 100;
-    expect(Math.abs(projected - Math.round((S * 31) / 20)) <= 1, `the projection is spending so far × 31 / 20 days (${projected} vs ${Math.round((S * 31) / 20)})`);
+    const projected = Number(/AED\s([\d,.]+)\sby/.exec(close.projection[1])[1].replace(/,/g, '')) * 100;
+    expect(Math.abs(projected - Math.round((closePlan.S * 31) / 20)) <= 1, `the projection is spending so far × 31 / 20 days (${projected} vs ${Math.round((closePlan.S * 31) / 20)})`);
     await snap('bud-04-cards');
   });
 
@@ -359,31 +364,31 @@ try {
     expectEqual(shown[0].name, 'Everything this week', 'the all-spending budget comes first');
     const week = spentIn(data, WEEK);
     expectEqual(shown[0].figures[0], `${await fmt(week)} of ${await fmt(3000000)}`, 'weekly: spent this week only');
-    expectEqual(shown[0].period, 'Weekly · 19 Oct 2026 – 25 Oct 2026', 'weekly: the week is named');
+    expectEqual(shown[0].period, 'All spending · Weekly · 19 Oct 2026 – 25 Oct 2026', 'weekly: the week is named');
     const custom = shown.find((c) => c.name === 'Food & Dining');
     const food = spentIn(data, ['2026-10-05', '2026-10-12'], 'Food & Dining');
     expectEqual(custom.figures[0], `${await fmt(food)} of ${await fmt(900000)}`, 'custom: both end days counted');
-    expectEqual(custom.period, 'Food & Dining · Custom period · 5 Oct 2026 – 12 Oct 2026', 'custom: the dates are named');
+    expectEqual(custom.period, 'Custom period · 5 Oct 2026 – 12 Oct 2026', 'custom: the dates are named (the name is the category, so the subtitle does not repeat it)');
     expect(/^Ended 12 Oct 2026$/.test(custom.notes[0]), `custom: says it has ended (${custom.notes[0]})`);
     expectEqual(custom.projection.length, 0, 'custom: no projection for a period that is over');
     await snap('bud-05-more-cards');
   });
 
   await step('Opening a budget shows its rules and exactly the expenses it counts', async () => {
-    await page.locator(`${TOP} .budget-card`).filter({ hasText: 'Groceries close' }).click();
+    await page.locator(`${TOP} .budget-card`).filter({ hasText: closePlan.name }).click();
     await settle(400);
-    expectEqual(await f.pageTitle(), 'Groceries close', 'page title');
+    expectEqual(await f.pageTitle(), closePlan.name, 'page title');
     const facts = await pageFacts();
-    const counted = data.filter((e) => e.category === 'Groceries' && e.day >= MONTH[0] && e.day <= MONTH[1]);
-    expectEqual(facts['Expenses counted'], `${counted.length} · ${await fmt(S)}`, 'expenses counted');
-    expectEqual(facts.Covers, 'Groceries', 'covers');
+    const counted = data.filter((e) => e.category === closePlan.category && e.currency === 'AED' && e.day >= MONTH[0] && e.day <= MONTH[1]);
+    expectEqual(facts['Expenses counted'], `${counted.length} · ${await fmt(closePlan.S)}`, 'expenses counted');
+    expectEqual(facts.Covers, closePlan.category, 'covers');
     expectEqual(facts.Repeats, 'Monthly', 'repeats');
     expectEqual(facts['Warning levels'], '80%, 100%', 'levels');
     expectEqual(facts['Alerts inside the app'], 'Off', 'alerts');
     await snap('bud-06-detail');
     await page.locator(`${TOP} .row`, { hasText: 'Expenses counted' }).click();
     await settle(400);
-    expectEqual(await f.pageTitle(), 'Groceries close', 'the list of what is counted');
+    expectEqual(await f.pageTitle(), closePlan.name, 'the list of what is counted');
     expectEqual(await page.locator(`${TOP} .row .row-amount`).count(), counted.length, 'one row for each counted expense');
     await f.back();
     await f.back();
@@ -391,36 +396,36 @@ try {
   });
 
   await step('Editing shows what was saved, and a change updates the card', async () => {
-    await page.locator(`${TOP} .budget-card`).filter({ hasText: 'Groceries within' }).click();
+    await page.locator(`${TOP} .budget-card`).filter({ hasText: withinPlan.name }).click();
     await settle(350);
     await f.navButton('Edit').click();
     await sheet().locator('.navbar-title', { hasText: 'Edit budget' }).waitFor({ timeout: 5000 });
     await settle(300);
-    expectEqual(await shownAmount(), `${withinLimit}.00`.replace(/(\d)(?=(\d{3})+\.)/g, '$1,'), 'amount');
-    expectEqual(await field('Budget name').inputValue(), 'Groceries within', 'name');
-    expectEqual((await sheet().locator('.row', { hasText: 'Covers' }).locator('.row-value').innerText()).trim(), 'Groceries', 'covers');
+    expectEqual(await shownAmount(), `${withinPlan.limit}.00`.replace(/(\d)(?=(\d{3})+\.)/g, '$1,'), 'amount');
+    expectEqual(await field('Budget name').inputValue(), withinPlan.name, 'name');
+    expectEqual((await sheet().locator('.row', { hasText: 'Covers' }).locator('.row-value').innerText()).trim(), withinPlan.category, 'covers');
     expectEqual(await pressed(seg('Monthly')), 'true', 'repeats');
     expect(await sheet().getByRole('switch', { name: 'Active' }).isChecked(), 'active');
     expect(await sheet().getByRole('button', { name: 'Delete budget' }).isVisible(), 'delete is offered');
     await snap('bud-07-edit');
     // a different name and the 90% level
-    await field('Budget name').fill('Groceries (relaxed)');
+    await field('Budget name').fill(relaxedName);
     await endTyping(field('Budget name'));
     await level('90%').click();
     await saveButton().click();
     await f.waitToast('Budget updated');
     await f.noLayers();
     await settle(300);
-    expectEqual(await f.pageTitle(), 'Groceries (relaxed)', 'the detail page has the new name');
-    const [edited] = (await budgetsStored()).filter((b) => b.name === 'Groceries (relaxed)');
+    expectEqual(await f.pageTitle(), relaxedName, 'the detail page has the new name');
+    const [edited] = (await budgetsStored()).filter((b) => b.name === relaxedName);
     expectEqual(edited.levels, [80, 90, 100], 'the new level is saved in order');
     expectEqual((await budgetsStored()).length, 5, 'still five budgets: edited, not added');
     await f.back();
-    expectEqual((await cards()).map((c) => c.name).includes('Groceries (relaxed)'), true, 'the card has the new name');
+    expectEqual((await cards()).map((c) => c.name).includes(relaxedName), true, 'the card has the new name');
   });
 
   await step('Pausing takes a budget off the cards and into a Paused list; resuming brings it back', async () => {
-    await page.locator(`${TOP} .budget-card`).filter({ hasText: 'Groceries (relaxed)' }).click();
+    await page.locator(`${TOP} .budget-card`).filter({ hasText: relaxedName }).click();
     await settle(350);
     const active = page.locator(`${TOP}`).getByRole('switch', { name: /Active/ });
     expect(await active.isChecked(), 'active to begin with');
@@ -428,17 +433,17 @@ try {
     await settle(400);
     expect(/Paused/.test(await page.locator(TOP).locator('.budget-card').innerText()), 'the card on the detail page says Paused');
     await f.back();
-    expect((await cards()).every((c) => c.name !== 'Groceries (relaxed)'), 'it is no longer a card');
+    expect((await cards()).every((c) => c.name !== relaxedName), 'it is no longer a card');
     expect(/Paused budgets are not measured and give no alerts\. Open one to resume it\./.test(await page.locator(TOP).innerText()), 'there is a Paused list');
-    expect(/Groceries \(relaxed\)/.test(await page.locator(`${TOP} .group`, { hasText: 'Paused' }).innerText()), 'with the budget in it');
+    expect((await page.locator(`${TOP} .group`, { hasText: 'Paused' }).innerText()).includes(relaxedName), 'with the budget in it');
     expect(/Monthly · October 2026 · paused/.test(await page.locator(`${TOP} .group`, { hasText: 'Paused' }).innerText()), 'saying why');
     await snap('bud-08-paused');
-    await page.locator(`${TOP} .row`, { hasText: 'Groceries (relaxed)' }).click();
+    await page.locator(`${TOP} .row`, { hasText: relaxedName }).click();
     await settle(350);
     await page.locator(TOP).getByRole('switch', { name: /Active/ }).check({ force: true });
     await settle(400);
     await f.back();
-    expect((await cards()).some((c) => c.name === 'Groceries (relaxed)'), 'back among the cards');
+    expect((await cards()).some((c) => c.name === relaxedName), 'back among the cards');
     expect(!(await page.locator(`${TOP} .group`, { hasText: 'Paused' }).count()), 'and the Paused list is gone');
   });
 

@@ -15,9 +15,9 @@ export const SHOTS = process.env.SHOTS_DIR || path.join(HERE, '..', '..', '..', 
 /** 2026-10-20 12:00 in Dubai (08:00 UTC): the same "today" the unit tests use. */
 export const FIXED_NOW = new Date('2026-10-20T08:00:00Z');
 
-export async function launch({ timezoneId = 'Asia/Dubai', locale = 'en-GB', colorScheme = 'light', serviceWorkers = 'block', viewport = { width: 440, height: 956 }, now = FIXED_NOW } = {}) {
+export async function launch({ timezoneId = 'Asia/Dubai', locale = 'en-GB', colorScheme = 'light', serviceWorkers = 'block', viewport = { width: 440, height: 956 }, now = FIXED_NOW, docsRoot = undefined } = {}) {
   fs.mkdirSync(SHOTS, { recursive: true });
-  const { server, url } = await startServer({ port: 0, withTests: true });
+  const { server, url } = await startServer({ port: 0, withTests: true, docsRoot });
   let browser;
   try {
     browser = await chromium.launch();

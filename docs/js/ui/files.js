@@ -1,4 +1,4 @@
-// Getting a file from the person (a backup to restore) and handing a file to the person (a CSV, a PDF, a backup).
+// Getting a file from the person (a backup to restore) and handing a file to the person (a CSV, a backup).
 // Nothing is uploaded anywhere: a file goes into the iPhone's share sheet (where the person chooses Files, AirDrop, Mail...)
 // or is downloaded to the device, and a chosen file is read right here.
 
