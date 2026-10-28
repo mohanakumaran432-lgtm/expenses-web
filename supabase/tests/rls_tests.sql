@@ -54,7 +54,7 @@ begin
     insert into auth.users (id, email) values (gen_random_uuid(), 'boot@test.invalid');
     perform pg_temp.expect('invited bootstrap email becomes owner', (select role from public.household_members where email = 'boot@test.invalid'), 'owner');
     perform pg_temp.expect('last owner login cannot be deleted', pg_temp.run_admin($q$delete from auth.users where email = 'boot@test.invalid'$q$), 'err:23514');
-    delete from public.households;  -- cascade must still work when a household is removed
+    delete from public.households where name = 'Boot Home';  -- cascade must still work when a household is removed (only the test's own row)
     delete from auth.users where email = 'boot@test.invalid';
   else
     notes := E'\nNote: bootstrap tests skipped because a household already exists (expected after real setup).';
@@ -170,9 +170,12 @@ begin
   perform pg_temp.expect('member cannot change own household', pg_temp.run_as(ma, format('update public.household_members set household_id = %L where user_id = %L', hB, ma)), 'err:42501');
   perform pg_temp.expect('member cannot change own email', pg_temp.run_as(ma, format('update public.household_members set email = ''z@test.invalid'' where user_id = %L', ma)), 'err:42501');
   perform pg_temp.expect('member can change own display name', pg_temp.run_as(ma, format('update public.household_members set display_name = ''Mia'' where user_id = %L', ma)), 'ok:1');
-  perform pg_temp.expect('owner cannot change own role', pg_temp.run_as(oa, format('update public.household_members set role = ''member'' where user_id = %L', oa)), 'err:42501');
+  perform pg_temp.expect('sole owner cannot demote self (last-owner guard)', pg_temp.run_as(oa, format('update public.household_members set role = ''member'' where user_id = %L', oa)), 'err:23514');
   perform pg_temp.expect('owner can promote a member', pg_temp.run_as(oa, format('update public.household_members set role = ''owner'' where user_id = %L', ma)), 'ok:1');
   perform pg_temp.expect('promotion took effect', (select role from public.household_members where user_id = ma), 'owner');
+  -- With two owners the last-owner guard stays quiet, so this reaches the "never on yourself" rule.
+  perform pg_temp.expect('owner cannot change own role (two owners)', pg_temp.run_as(oa, format('update public.household_members set role = ''member'' where user_id = %L', oa)), 'err:42501');
+  perform pg_temp.expect('role unchanged after self-demotion attempt', (select role from public.household_members where user_id = oa), 'owner');
   perform pg_temp.expect('owner can demote another owner', pg_temp.run_as(oa, format('update public.household_members set role = ''member'' where user_id = %L', ma)), 'ok:1');
   perform pg_temp.expect('owner cannot remove self', pg_temp.run_as(oa, format('delete from public.household_members where user_id = %L', oa)), 'ok:0');
   perform pg_temp.expect('last owner cannot be demoted (even by admin)', pg_temp.run_admin(format('update public.household_members set role = ''member'' where user_id = %L', oa)), 'err:23514');
@@ -181,6 +184,7 @@ begin
   perform pg_temp.expect('removed member sees nothing', pg_temp.run_as(ma, 'select * from public.transactions'), 'ok:0');
   perform pg_temp.expect('removed member cannot write', pg_temp.run_as(ma,
     format('insert into public.transactions (%s) values (%L, %L, ''expense'', 1, current_date, %L, ''cash'', '''')', tx_cols, hA, ma, cAx)), 'err:42501');
+  perform pg_temp.expect('removed member''s past transactions stay in the ledger', (select (count(*) > 0)::text from public.transactions where created_by = ma), 'true');
 
   -- H. Invite-only sign-up
   perform pg_temp.expect('sign-up without invitation is blocked', pg_temp.run_admin($q$insert into auth.users (id, email) values (gen_random_uuid(), 'nobody@test.invalid')$q$), 'err:42501');

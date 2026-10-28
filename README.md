@@ -15,7 +15,7 @@ Private, mobile-first family income and expense tracker. React + TypeScript + Vi
 4. Project Settings > API: "Exposed schemas" must contain `public` only (never `private`).
 5. SQL Editor: open `supabase/seed/first_owner.sql`, put in your email, household name and name, press Run. It must say the owner invitation is saved or the owner is linked. It runs only once.
 6. Authentication > Users > Add user: same email as step 5. Choose "Create new user", set a password of 10+ characters, tick auto-confirm.
-7. SQL Editor: run `supabase/tests/rls_tests.sql`. Expected message: `RLS TESTS: <n> passed, 0 failed` (it is shown as an error on purpose, because that is how everything gets rolled back).
+7. SQL Editor: run `supabase/tests/rls_tests.sql`. Expected message: `RLS TESTS: <n> passed, 0 failed` (it is shown as an error on purpose, because that is how everything gets rolled back). If the editor warns about a destructive query, confirm it: the script only touches rows it creates itself and rolls everything back.
 
 **B. Cloudflare Pages** (private GitHub repo)
 1. Workers & Pages > Create > Pages > Connect to Git > pick this repository, production branch `main`.
@@ -38,7 +38,7 @@ npm run dev
 
 ## Tests
 - `npm test` runs unit tests (money, Dubai dates, CSV formula-injection guard, summaries).
-- `supabase/tests/rls_tests.sql` runs about 120 authorization checks against real Postgres in a rolled-back transaction (signed-out access, household isolation, owner/member rules, creator forgery, role escalation, invite-only sign-up).
+- `supabase/tests/rls_tests.sql` runs over 120 authorization checks against real Postgres in a rolled-back transaction (signed-out access, household isolation, owner/member rules, creator forgery, role escalation, invite-only sign-up).
 - `docs/SECURITY_CHECKLIST.md` lists manual end-to-end checks for the live site.
 - GitHub Actions (`.github/workflows/ci.yml`) runs type-check, unit tests and the production build on every push.
 
