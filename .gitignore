@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.wrangler/
+.DS_Store
+*.log
+
+# Environment files and credentials must never be committed
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/

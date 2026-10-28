@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - name: Type-check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production build (placeholder public values)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      - name: Build must refuse a secret key
+        run: |
+          if VITE_SUPABASE_URL=https://placeholder.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=sb_secret_fake npx vite build --outDir /tmp/should-not-exist; then
+            echo "Build accepted a secret key" && exit 1
+          fi
+      - name: PWA and deployment files are in the build
+        run: |
+          for f in index.html manifest.webmanifest sw.js _headers icons/icon-192.png icons/icon-512.png icons/icon-maskable-512.png; do
+            test -s "dist/$f" || { echo "missing dist/$f"; exit 1; }
+          done
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('dist/manifest.webmanifest','utf8'));if(m.display!=='standalone'||!m.icons.some(i=>i.sizes==='512x512')||!m.icons.some(i=>i.sizes==='192x192')||!m.start_url)process.exit(1)"
