@@ -5,7 +5,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write # TEMP: lets CI save the lockfile once and publish the build for inspection
 
 jobs:
   build:
@@ -15,8 +15,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Remember whether a lockfile exists
+        run: echo "HAD_LOCK=$([ -f package-lock.json ] && echo yes || echo no)" >> "$GITHUB_ENV"
       - name: Install
         run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - name: Save the lockfile once (first run only)
+        if: env.HAD_LOCK == 'no' && github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -q -m "Add package-lock.json (generated in CI)"
+          git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
       - name: Type-check
         run: npm run typecheck
       - name: Unit tests
@@ -37,3 +47,18 @@ jobs:
             test -s "dist/$f" || { echo "missing dist/$f"; exit 1; }
           done
           node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('dist/manifest.webmanifest','utf8'));if(m.display!=='standalone'||!m.icons.some(i=>i.sizes==='512x512')||!m.icons.some(i=>i.sizes==='192x192')||!m.start_url)process.exit(1)"
+      - name: Publish the build output for inspection (TEMP)
+        if: github.event_name == 'push' && github.ref_name == 'claude/family-ledger-app'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          git init -q -b ci-dist
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Build output of ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-dist
+      - name: Audit runtime dependencies for known vulnerabilities
+        run: |
+          npm audit --omit=dev --audit-level=high > "$RUNNER_TEMP/audit.txt" 2>&1 || { echo "::error::$(head -c 900 "$RUNNER_TEMP/audit.txt" | tr '\n' ' ')"; exit 1; }
