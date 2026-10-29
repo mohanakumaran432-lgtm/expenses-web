@@ -17,10 +17,10 @@ Private, mobile-first family income and expense tracker. React + TypeScript + Vi
 6. Authentication > Users > Add user: same email as step 5. Choose "Create new user", set a password of 10+ characters, tick auto-confirm.
 7. SQL Editor: run `supabase/tests/rls_tests.sql`. Expected message: `RLS TESTS: <n> passed, 0 failed` (it is shown as an error on purpose, because that is how everything gets rolled back). If the editor warns about a destructive query, confirm it: the script only touches rows it creates itself and rolls everything back.
 
-**B. Cloudflare Pages** (private GitHub repo)
-1. Workers & Pages > Create > Pages > Connect to Git > pick this repository, production branch `main`.
-2. Framework preset "React (Vite)": build command `npm run build`, output directory `dist`.
-3. Settings > Environment variables (Production and Preview): `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable key only, never a secret/service_role key). `.node-version` already selects Node 22.
+**B. Cloudflare** (GitHub repo; Pages or Workers both work)
+1. Open https://dash.cloudflare.com/?to=/:account/workers-and-pages > Create application. Choose Pages > Import an existing Git repository, or (if only Workers is offered) the GitHub option. Pick this repository, production branch `main`.
+2. Build command `npm run build`. Pages: preset "React (Vite)", output directory `dist`. Workers: leave the deploy command as it is; `wrangler.jsonc` already points to `dist` and uses the Worker name `expenses-web`.
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable key only, never a secret/service_role key). Pages: Environment variables. Workers: Settings > Builds > "Build variables and secrets" (the runtime "Variables" are not used by the build). `.node-version` already selects Node 22.
 4. Save and deploy. Then finish A3 using the real address.
 
 **C. Invite a family member** (owner only)
