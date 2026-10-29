@@ -20,7 +20,7 @@ function looksSecret(k: string): boolean {
 
 export const configError: string | null =
   !url || !key
-    ? 'This app is not configured yet. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (Cloudflare Pages > Settings > Variables and Secrets), then redeploy.'
+    ? 'This app is not configured yet. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY as build variables in Cloudflare (your project > Settings > Build variables and secrets), then rebuild.'
     : !/^https:\/\/[^/\s]+$/.test(url)
       ? 'VITE_SUPABASE_URL must look like https://YOUR-PROJECT-REF.supabase.co'
       : looksSecret(key)
