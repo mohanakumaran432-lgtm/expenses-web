@@ -37,3 +37,9 @@ Use `-H "apikey: $KEY" -H "Authorization: Bearer $TOKEN"`.
 - [ ] Offline, the app shows only "You are offline" (no financial data).
 - [ ] `curl -I https://YOUR-SITE/` shows `content-security-policy`, `x-frame-options: DENY`, `x-content-type-options: nosniff`.
 - [ ] After sign-out, pressing Back does not show private data.
+
+## 8. Real sign-in flow (only possible on the live site)
+- [ ] The owner signs in with the email and password created in Supabase (Authentication > Users).
+- [ ] A family member added as in README section C signs in with the first password and can change it under Settings.
+- [ ] After the owner removes that member in Settings, the member's next page load shows "No household access".
+- [ ] Authentication > Sign In / Providers shows "Allow new users to sign up" switched off.

@@ -25,7 +25,8 @@ Private, mobile-first family income and expense tracker. React + TypeScript + Vi
 
 **C. Invite a family member** (owner only)
 1. In the app: Settings > Invitations: enter their email (and name), Add.
-2. Supabase > Authentication > Users > Add user > Send invitation, same email. They open the emailed link, choose a password, and are in. Sign-up is refused for any email without an invitation.
+2. Supabase > Authentication > Users > Add user > **Create new user**: same email, a first password (10+ characters), tick Auto Confirm User. Give them the password privately; they sign in and change it under Settings > Change password. Sign-up is refused for any email without an invitation.
+3. Emails: Supabase's built-in email service only delivers to your own Supabase team members, so "Send invitation" and "Forgot password?" emails will not reach family members unless you set up custom SMTP (Authentication > Emails > SMTP Settings). Without that, the owner creates the logins as in step 2.
 
 **D. Install on Android**: open the site in Chrome, menu (three dots) > Install app (or Add to Home screen).
 
@@ -46,3 +47,4 @@ npm run dev
 - Browser code only ever holds the publishable key. The build fails if a `VITE_` variable looks like a secret key.
 - The service worker caches nothing, so financial data is never stored for offline use. `public/_headers` sets a strict CSP and other headers.
 - Removing a member revokes access immediately; their past transactions stay in the ledger (owners can edit them).
+- `package-lock.json` pins every package version with checksums (all from the official npm registry), and CI audits the runtime packages for known high/critical vulnerabilities.

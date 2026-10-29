@@ -62,7 +62,7 @@ th, td { text-align: right; padding: .4rem .25rem; border-bottom: 1px solid var(
 
 .txlist { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 .tx { width: 100%; display: flex; justify-content: space-between; gap: .75rem; text-align: left; padding: .8rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); cursor: pointer; }
-.tx:disabled { cursor: default; opacity: 1; } .tx > span:last-child { font-weight: 700; white-space: nowrap; }
+.tx:disabled { cursor: default; opacity: .7; } .tx > span:last-child { font-weight: 700; white-space: nowrap; }
 .filters summary { cursor: pointer; font-weight: 600; min-height: 28px; }
 
 .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }

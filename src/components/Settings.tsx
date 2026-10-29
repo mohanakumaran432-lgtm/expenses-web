@@ -122,7 +122,7 @@ function InvitesCard({ householdId }: { householdId: string }) {
   return (
     <section className="card stack">
       <h3>Invitations</h3>
-      <p className="muted small">Step 1: add the email here. Step 2: in Supabase open Authentication, then Users, then Invite user, and invite the same email. They get an email link to set a password.</p>
+      <p className="muted small">Step 1: add the email here. Step 2: in Supabase open Authentication, then Users, then Add user, then Create new user. Use the same email, give a first password (10+ characters) and tick Auto Confirm User. Share the password privately; they can change it under Settings.</p>
       <form className="stack" onSubmit={(e) => { e.preventDefault(); void run(async () => { await addInvitation(householdId, email, name); setEmail(''); setName('') }) }}>
         <label className="field">Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="field">Name (optional)<input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} /></label>
